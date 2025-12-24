@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katzen-Überwachung - VDO.Ninja Multi-View</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 10px;
+        }
+        
+        h1 {
+            text-align: center;
+            padding: 15px;
+            background-color: #2a2a2a;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        
+        .container {
+            column-count: 2;
+            column-gap: 15px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                column-count: 1;
+            }
+        }
+        
+        .stream-box {
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            padding: 10px;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 15px;
+            break-inside: avoid;
+        }
+        
+        .stream-wrapper {
+            position: relative;
+            background-color: #000;
+            border-radius: 5px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .stream-wrapper iframe {
+            transition: transform 0.3s ease;
+        }
+        
+        .stream-wrapper.rotate-90 iframe {
+            transform: rotate(90deg);
+        }
+        
+        .stream-wrapper.rotate-180 iframe {
+            transform: rotate(180deg);
+        }
+        
+        .stream-wrapper.rotate-270 iframe {
+            transform: rotate(270deg);
+        }
+        
+        /* Frame size variants */
+        .stream-box.size-small .stream-wrapper {
+            height: 150px;
+        }
+        
+        .stream-box.size-medium .stream-wrapper {
+            height: 250px;
+        }
+        
+        .stream-box.size-large .stream-wrapper {
+            height: 350px;
+        }
+        
+        .stream-box.size-xlarge .stream-wrapper {
+            height: 450px;
+        }
+        
+        .stream-box.size-xxlarge .stream-wrapper {
+            height: 600px;
+        }
+        
+        .stream-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+            z-index: 10;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .room-name-input {
+            padding: 6px 8px;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        
+        .room-name-input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 3px;
+            color: #fff;
+            font-size: 13px;
+        }
+        
+        input[type="text"]::placeholder {
+            color: #888;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        
+        button {
+            padding: 8px 15px;
+            background-color: #4a9eff;
+            border: none;
+            border-radius: 3px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3a8eef;
+        }
+        
+        button:active {
+            background-color: #2a7edf;
+        }
+        
+        .clear-btn {
+            background-color: #666;
+            padding: 8px 12px;
+        }
+        
+        .clear-btn:hover {
+            background-color: #777;
+        }
+        
+        .rotate-btn {
+            background-color: #ff9500;
+            padding: 8px 12px;
+            flex: 1;
+        }
+        
+        .rotate-btn:hover {
+            background-color: #ff8500;
+        }
+        
+        .size-selector {
+            display: flex;
+            gap: 3px;
+            margin-top: 5px;
+        }
+        
+        .size-btn {
+            flex: 1;
+            padding: 6px 8px;
+            background-color: #555;
+            font-size: 11px;
+        }
+        
+        .size-btn:hover {
+            background-color: #666;
+        }
+        
+        .size-btn.active {
+            background-color: #4a9eff;
+        }
+        
+        .size-btn.active:hover {
+            background-color: #3a8eef;
+        }
+        
+        /* Password Overlay */
+        #password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        #password-overlay.hidden {
+            display: none;
+        }
+        
+        .password-box {
+            background-color: #2a2a2a;
+            border: 2px solid #4a9eff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .password-box h2 {
+            margin-bottom: 20px;
+            color: #4a9eff;
+        }
+        
+        .password-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background-color: #3a3a3a;
+            border: 1px solid #555;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .password-box input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+        
+        .password-box button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4a9eff;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .password-box button:hover {
+            background-color: #3a8eef;
+        }
+        
+        .password-error {
+            color: #ff4444;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .password-error.show {
+            display: block;
+        }
+        
+        #main-content {
+            filter: blur(0px);
+            transition: filter 0.3s ease;
+        }
+        
+        #main-content.blurred {
+            filter: blur(10px);
+            pointer-events: none;
+        }
+        
+        .room-name {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .info {
+            text-align: center;
+            margin: 20px;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info code {
+            background-color: #3a3a3a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .placeholder-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        @media (max-width: 800px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Password Overlay -->
+    <div id="password-overlay">
+        <div class="password-box">
+            <h2>🔒 Geschützter Bereich</h2>
+            <p>Bitte Passwort eingeben:</p>
+            <input type="password" id="password-input" placeholder="Passwort" autocomplete="off">
+            <button onclick="checkPassword()">Entsperren</button>
+            <div class="password-error" id="password-error">❌ Falsches Passwort!</div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div id="main-content" class="blurred">
+    <h1>🐱 Katzen-Überwachung</h1>
+    
+    <div class="container">
+        <!-- Stream 1 -->
+        <div class="stream-box size-medium" id="stream-box-1">
+            <div class="stream-wrapper" id="frame-container-1" data-rotation="0">
+                <div class="stream-label" id="label-1">📱 Wohnzimmer</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-1" placeholder="Raumname..." value="Wohnzimmer" onchange="saveRoomName(1)">
+                <div class="input-group">
+                    <input type="text" id="url-input-1" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(1)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(1)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(1)"><span id="rotation-text-1">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(1, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(1, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(1, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(1, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(1, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stream 2 -->
+        <div class="stream-box size-medium" id="stream-box-2">
+            <div class="stream-wrapper" id="frame-container-2" data-rotation="0">
+                <div class="stream-label" id="label-2">📱 Schlafzimmer</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-2" placeholder="Raumname..." value="Schlafzimmer" onchange="saveRoomName(2)">
+                <div class="input-group">
+                    <input type="text" id="url-input-2" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(2)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(2)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(2)"><span id="rotation-text-2">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(2, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(2, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(2, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(2, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(2, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stream 3 -->
+        <div class="stream-box size-medium" id="stream-box-3">
+            <div class="stream-wrapper" id="frame-container-3" data-rotation="0">
+                <div class="stream-label" id="label-3">📱 Küche</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-3" placeholder="Raumname..." value="Küche" onchange="saveRoomName(3)">
+                <div class="input-group">
+                    <input type="text" id="url-input-3" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(3)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(3)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(3)"><span id="rotation-text-3">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(3, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(3, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(3, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(3, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(3, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stream 4 -->
+        <div class="stream-box size-medium" id="stream-box-4">
+            <div class="stream-wrapper" id="frame-container-4" data-rotation="0">
+                <div class="stream-label" id="label-4">📱 Flur</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-4" placeholder="Raumname..." value="Flur" onchange="saveRoomName(4)">
+                <div class="input-group">
+                    <input type="text" id="url-input-4" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(4)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(4)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(4)"><span id="rotation-text-4">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(4, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(4, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(4, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(4, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(4, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stream 5 -->
+        <div class="stream-box size-medium" id="stream-box-5">
+            <div class="stream-wrapper" id="frame-container-5" data-rotation="0">
+                <div class="stream-label" id="label-5">📱 Balkon</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-5" placeholder="Raumname..." value="Balkon" onchange="saveRoomName(5)">
+                <div class="input-group">
+                    <input type="text" id="url-input-5" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(5)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(5)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(5)"><span id="rotation-text-5">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(5, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(5, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(5, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(5, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(5, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stream 6 -->
+        <div class="stream-box size-medium" id="stream-box-6">
+            <div class="stream-wrapper" id="frame-container-6" data-rotation="0">
+                <div class="stream-label" id="label-6">📱 Bad</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-6" placeholder="Raumname..." value="Bad" onchange="saveRoomName(6)">
+                <div class="input-group">
+                    <input type="text" id="url-input-6" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(6)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(6)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(6)"><span id="rotation-text-6">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(6, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(6, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(6, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(6, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(6, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info">
+        <strong>📝 Anleitung:</strong><br>
+        1. Gib einen eigenen Raumnamen im obersten Feld ein (wird automatisch gespeichert)<br>
+        2. Kopiere den VDO.Ninja View-Link von deinem Handy und füge ihn ein<br>
+        3. Klicke auf "Speichern" - der Link wird automatisch gespeichert und geladen<br>
+        4. Mit "🔄" kannst du das Bild drehen (0° → 90° → 180° → 270° → 0°)<br>
+        5. Wähle die Frame-Größe: Klein, Mittel, Groß, XL oder XXL<br>
+        6. Alle Einstellungen (Name, Link, Drehung, Größe) bleiben gespeichert<br>
+        7. Mit "×" kannst du einen Stream löschen
+    </div>
+    
+    </div><!-- End of main-content -->
+    
+    <script>
+        // Password Protection
+        const correctPassword = 'Sissi';
+        
+        // Beim Laden der Seite gespeicherte Einstellungen wiederherstellen
+        window.addEventListener('DOMContentLoaded', function() {
+            const isUnlocked = sessionStorage.getItem('vdo-unlocked');
+            
+            // Check if password was already entered
+            if (isUnlocked === 'true') {
+                unlockContent();
+            }
+            
+            // Allow Enter key to submit password
+            const passwordInput = document.getElementById('password-input');
+            if (passwordInput) {
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkPassword();
+                    }
+                });
+                passwordInput.focus();
+            }
+        });
+        
+        function checkPassword() {
+            const input = document.getElementById('password-input');
+            const error = document.getElementById('password-error');
+            
+            if (input.value === correctPassword) {
+                // Correct password
+                sessionStorage.setItem('vdo-unlocked', 'true');
+                unlockContent();
+            } else {
+                // Wrong password
+                error.classList.add('show');
+                input.value = '';
+                input.focus();
+                
+                // Hide error after 2 seconds
+                setTimeout(() => {
+                    error.classList.remove('show');
+                }, 2000);
+            }
+        }
+        
+        function unlockContent() {
+            document.getElementById('password-overlay').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('blurred');
+            
+            // Load saved settings
+            for (let i = 1; i <= 6; i++) {
+                loadSavedStream(i);
+                loadSavedRotation(i);
+                loadSavedRoomName(i);
+                loadSavedSize(i);
+            }
+        }
+        
+        function saveRoomName(streamNumber) {
+            const input = document.getElementById('room-name-' + streamNumber);
+            const label = document.getElementById('label-' + streamNumber);
+            const roomName = input.value.trim() || 'Stream ' + streamNumber;
+            
+            // Update label
+            label.textContent = '📱 ' + roomName;
+            
+            // Save to localStorage
+            localStorage.setItem('vdo-room-name-' + streamNumber, roomName);
+        }
+        
+        function loadSavedRoomName(streamNumber) {
+            const savedName = localStorage.getItem('vdo-room-name-' + streamNumber);
+            
+            if (savedName) {
+                const input = document.getElementById('room-name-' + streamNumber);
+                const label = document.getElementById('label-' + streamNumber);
+                
+                input.value = savedName;
+                label.textContent = '📱 ' + savedName;
+            }
+        }
+        
+        function saveStream(streamNumber) {
+            const input = document.getElementById('url-input-' + streamNumber);
+            let url = input.value.trim();
+            
+            if (!url) {
+                alert('Bitte gib einen VDO.Ninja Link ein!');
+                return;
+            }
+            
+            // URL in LocalStorage speichern
+            localStorage.setItem('vdo-stream-' + streamNumber, url);
+            
+            // Stream laden
+            loadStream(streamNumber, url);
+        }
+        
+        function loadStream(streamNumber, url) {
+            const container = document.getElementById('frame-container-' + streamNumber);
+            
+            // Entferne Placeholder
+            const placeholder = container.querySelector('.placeholder-text');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Entferne altes iframe falls vorhanden
+            const oldIframe = container.querySelector('iframe');
+            if (oldIframe) {
+                oldIframe.remove();
+            }
+            
+            // Erstelle neues iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.allow = "autoplay; camera; microphone; display-capture; picture-in-picture";
+            iframe.allowFullscreen = true;
+            
+            container.appendChild(iframe);
+        }
+        
+        function loadSavedStream(streamNumber) {
+            const savedUrl = localStorage.getItem('vdo-stream-' + streamNumber);
+            
+            if (savedUrl) {
+                // URL in Eingabefeld setzen
+                document.getElementById('url-input-' + streamNumber).value = savedUrl;
+                // Stream laden
+                loadStream(streamNumber, savedUrl);
+            }
+        }
+        
+        function clearStream(streamNumber) {
+            if (confirm('Stream wirklich löschen?')) {
+                // Aus LocalStorage entfernen
+                localStorage.removeItem('vdo-stream-' + streamNumber);
+                localStorage.removeItem('vdo-rotation-' + streamNumber);
+                
+                // Eingabefeld leeren
+                document.getElementById('url-input-' + streamNumber).value = '';
+                
+                // Rotation zurücksetzen
+                const container = document.getElementById('frame-container-' + streamNumber);
+                container.className = 'stream-wrapper';
+                container.setAttribute('data-rotation', '0');
+                updateRotationText(streamNumber, 0);
+                
+                // iframe entfernen und Placeholder anzeigen
+                const iframe = container.querySelector('iframe');
+                if (iframe) {
+                    iframe.remove();
+                }
+                
+                if (!container.querySelector('.placeholder-text')) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-text';
+                    placeholder.textContent = 'Kein Stream geladen';
+                    container.appendChild(placeholder);
+                }
+            }
+        }
+        
+        function rotateFrame(streamNumber) {
+            const container = document.getElementById('frame-container-' + streamNumber);
+            let currentRotation = parseInt(container.getAttribute('data-rotation')) || 0;
+            
+            // Nächste Rotation: 0 -> 90 -> 180 -> 270 -> 0
+            currentRotation = (currentRotation + 90) % 360;
+            
+            // Rotation anwenden
+            container.className = 'stream-wrapper';
+            if (currentRotation > 0) {
+                container.classList.add('rotate-' + currentRotation);
+            }
+            
+            container.setAttribute('data-rotation', currentRotation);
+            
+            // Button-Text aktualisieren
+            updateRotationText(streamNumber, currentRotation);
+            
+            // Rotation speichern
+            localStorage.setItem('vdo-rotation-' + streamNumber, currentRotation);
+        }
+        
+        function updateRotationText(streamNumber, rotation) {
+            const textElement = document.getElementById('rotation-text-' + streamNumber);
+            textElement.textContent = '🔄 ' + rotation + '°';
+        }
+        
+        function loadSavedRotation(streamNumber) {
+            const savedRotation = localStorage.getItem('vdo-rotation-' + streamNumber);
+            
+            if (savedRotation !== null) {
+                const rotation = parseInt(savedRotation);
+                const container = document.getElementById('frame-container-' + streamNumber);
+                
+                container.className = 'stream-wrapper';
+                if (rotation > 0) {
+                    container.classList.add('rotate-' + rotation);
+                }
+                
+                container.setAttribute('data-rotation', rotation);
+                updateRotationText(streamNumber, rotation);
+            }
+        }
+        
+        function setSize(streamNumber, size) {
+            const streamBox = document.getElementById('stream-box-' + streamNumber);
+            
+            // Entferne alle size-Klassen
+            streamBox.className = 'stream-box size-' + size;
+            
+            // Aktualisiere Button-Status
+            const buttons = streamBox.querySelectorAll('.size-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Finde und aktiviere den richtigen Button
+            const sizeNames = ['small', 'medium', 'large', 'xlarge', 'xxlarge'];
+            const btnIndex = sizeNames.indexOf(size);
+            if (btnIndex >= 0 && buttons[btnIndex]) {
+                buttons[btnIndex].classList.add('active');
+            }
+            
+            // Größe speichern
+            localStorage.setItem('vdo-size-' + streamNumber, size);
+        }
+        
+        function loadSavedSize(streamNumber) {
+            const savedSize = localStorage.getItem('vdo-size-' + streamNumber);
+            
+            if (savedSize) {
+                setSize(streamNumber, savedSize);
+            }
+        }
+    </script>
+</body>
+</html>
