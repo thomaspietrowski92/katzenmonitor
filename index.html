@@ -531,6 +531,32 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Stream 7 -->
+        <div class="stream-box size-medium" id="stream-box-7">
+            <div class="stream-wrapper" id="frame-container-7" data-rotation="0">
+                <div class="stream-label" id="label-7">📱 Garten</div>
+                <div class="placeholder-text">Kein Stream geladen</div>
+            </div>
+            <div class="controls">
+                <input type="text" class="room-name-input" id="room-name-7" placeholder="Raumname..." value="Garten" onchange="saveRoomName(7)">
+                <div class="input-group">
+                    <input type="text" id="url-input-7" placeholder="VDO.Ninja Link hier einfügen...">
+                    <button onclick="saveStream(7)">Speichern</button>
+                    <button class="clear-btn" onclick="clearStream(7)">×</button>
+                </div>
+                <div class="button-group">
+                    <button class="rotate-btn" onclick="rotateFrame(7)"><span id="rotation-text-7">🔄 0°</span></button>
+                </div>
+                <div class="size-selector">
+                    <button class="size-btn" onclick="setSize(7, 'small')">Klein</button>
+                    <button class="size-btn active" onclick="setSize(7, 'medium')">Mittel</button>
+                    <button class="size-btn" onclick="setSize(7, 'large')">Groß</button>
+                    <button class="size-btn" onclick="setSize(7, 'xlarge')">XL</button>
+                    <button class="size-btn" onclick="setSize(7, 'xxlarge')">XXL</button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div class="info">
@@ -548,7 +574,7 @@
     
     <script>
         // Password Protection
-        const correctPassword = 'Sissi';
+        const correctPasswords = ['Sissi', 'Sissy', 'sissi', 'sissy'];
         
         // Beim Laden der Seite gespeicherte Einstellungen wiederherstellen
         window.addEventListener('DOMContentLoaded', function() {
@@ -575,7 +601,7 @@
             const input = document.getElementById('password-input');
             const error = document.getElementById('password-error');
             
-            if (input.value === correctPassword) {
+            if (correctPasswords.includes(input.value)) {
                 // Correct password
                 sessionStorage.setItem('vdo-unlocked', 'true');
                 unlockContent();
@@ -596,13 +622,149 @@
             document.getElementById('password-overlay').classList.add('hidden');
             document.getElementById('main-content').classList.remove('blurred');
             
-            // Load saved settings
-            for (let i = 1; i <= 6; i++) {
+            // Load shared settings from cloud first, then local overrides
+            loadSharedSettings();
+        }
+        
+        // ===== SHARED CLOUD STORAGE =====
+        // JSONBin.io - Kostenloser Cloud-Speicher
+        const JSONBIN_BIN_ID = '694bcd74ae596e708fae3808';
+        const JSONBIN_API_KEY = '$2a$10$KRUOUP0ZyHUpPwOiNn.rbu3BNdM5YmZvVfM45QZA8/LnoTVB0LBD6';
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+        
+        async function loadSharedSettings() {
+            try {
+                const response = await fetch(JSONBIN_URL + '/latest', {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': JSONBIN_API_KEY
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const sharedSettings = data.record;
+                    
+                    // Lade geteilte Einstellungen für alle Streams
+                    for (let i = 1; i <= 7; i++) {
+                        const streamData = sharedSettings[`stream${i}`];
+                        if (streamData) {
+                            // Setze Raumnamen
+                            if (streamData.roomName) {
+                                document.getElementById('room-name-' + i).value = streamData.roomName;
+                                document.getElementById('label-' + i).textContent = '📱 ' + streamData.roomName;
+                            }
+                            
+                            // Setze URL
+                            if (streamData.url) {
+                                document.getElementById('url-input-' + i).value = streamData.url;
+                                loadStream(i, streamData.url);
+                            }
+                            
+                            // Setze Rotation
+                            if (streamData.rotation !== undefined) {
+                                const container = document.getElementById('frame-container-' + i);
+                                container.className = 'stream-wrapper';
+                                if (streamData.rotation > 0) {
+                                    container.classList.add('rotate-' + streamData.rotation);
+                                }
+                                container.setAttribute('data-rotation', streamData.rotation);
+                                updateRotationText(i, streamData.rotation);
+                            }
+                            
+                            // Setze Größe
+                            if (streamData.size) {
+                                setSize(i, streamData.size);
+                            }
+                        }
+                    }
+                    
+                    console.log('Geteilte Einstellungen geladen ✓');
+                } else {
+                    console.log('Keine geteilten Einstellungen gefunden, lade lokale...');
+                    loadLocalSettings();
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der geteilten Einstellungen:', error);
+                loadLocalSettings();
+            }
+        }
+        
+        function loadLocalSettings() {
+            // Fallback: Lade lokale Einstellungen
+            for (let i = 1; i <= 7; i++) {
                 loadSavedStream(i);
                 loadSavedRotation(i);
                 loadSavedRoomName(i);
                 loadSavedSize(i);
             }
+        }
+        
+        async function saveToCloud() {
+            // Sammle alle aktuellen Einstellungen
+            const settings = {};
+            
+            for (let i = 1; i <= 7; i++) {
+                const roomName = document.getElementById('room-name-' + i).value;
+                const url = document.getElementById('url-input-' + i).value;
+                const rotation = parseInt(document.getElementById('frame-container-' + i).getAttribute('data-rotation')) || 0;
+                const sizeClass = document.getElementById('stream-box-' + i).className;
+                const size = sizeClass.match(/size-(\w+)/)?.[1] || 'medium';
+                
+                settings[`stream${i}`] = {
+                    roomName: roomName,
+                    url: url,
+                    rotation: rotation,
+                    size: size
+                };
+            }
+            
+            try {
+                const response = await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': JSONBIN_API_KEY
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (response.ok) {
+                    console.log('Einstellungen in Cloud gespeichert ✓');
+                    showSaveNotification('✓ Gespeichert und synchronisiert!');
+                } else {
+                    console.error('Fehler beim Speichern in Cloud');
+                    showSaveNotification('⚠ Nur lokal gespeichert');
+                }
+            } catch (error) {
+                console.error('Cloud-Speicher-Fehler:', error);
+                showSaveNotification('⚠ Nur lokal gespeichert');
+            }
+        }
+        
+        function showSaveNotification(message) {
+            // Zeige kurze Benachrichtigung
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: #4a9eff;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 5px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
         }
         
         function saveRoomName(streamNumber) {
@@ -615,6 +777,9 @@
             
             // Save to localStorage
             localStorage.setItem('vdo-room-name-' + streamNumber, roomName);
+            
+            // Save to cloud
+            saveToCloud();
         }
         
         function loadSavedRoomName(streamNumber) {
@@ -643,6 +808,9 @@
             
             // Stream laden
             loadStream(streamNumber, url);
+            
+            // In Cloud speichern
+            saveToCloud();
         }
         
         function loadStream(streamNumber, url) {
@@ -730,6 +898,9 @@
             
             // Rotation speichern
             localStorage.setItem('vdo-rotation-' + streamNumber, currentRotation);
+            
+            // In Cloud speichern
+            saveToCloud();
         }
         
         function updateRotationText(streamNumber, rotation) {
@@ -773,6 +944,9 @@
             
             // Größe speichern
             localStorage.setItem('vdo-size-' + streamNumber, size);
+            
+            // In Cloud speichern
+            saveToCloud();
         }
         
         function loadSavedSize(streamNumber) {
