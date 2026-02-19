@@ -351,6 +351,7 @@
   <nav>
     <button class="active" data-view="calendar" onclick="showView('calendar',this)">Kalender</button>
     <button data-view="chart" onclick="showView('chart',this)">Blutspiegel</button>
+    <button data-view="mood" onclick="showView('mood',this)">Stimmung</button>
     <button data-view="substances" onclick="showView('substances',this)">Substanzen</button>
   </nav>
 </header>
@@ -391,6 +392,31 @@
         <canvas id="bloodChart"></canvas>
       </div>
       <p class="chart-note">&#9888;&#65039; Werte basieren auf Halbwertszeit-Modell — kein Ersatz für Bluttests. Individuelle Werte können stark abweichen.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mood View ── -->
+<div id="view-mood" class="view">
+  <div class="cal-header" style="margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:600">Stimmung &amp; Libido</h2>
+    <div class="range-btns" style="margin-left:auto">
+      <button class="mood-range-btn range-btn active" onclick="setMoodRange(7,this)">7 Tage</button>
+      <button class="mood-range-btn range-btn" onclick="setMoodRange(30,this)">30 Tage</button>
+      <button class="mood-range-btn range-btn" onclick="setMoodRange(90,this)">3 Monate</button>
+      <button class="mood-range-btn range-btn" onclick="setMoodRange(180,this)">6 Monate</button>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px">
+    <h3>Stimmungsverlauf</h3>
+    <div class="chart-wrap" style="height:280px">
+      <canvas id="moodChart"></canvas>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Libido-Verlauf</h3>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="libidoChart"></canvas>
     </div>
   </div>
 </div>
@@ -620,12 +646,14 @@ const MOODS = [
 let selMood   = null;  // 0–5 index, null = not set
 let selLibido = 0;     // 0 = not set, 1–5
 
-function renderMoodSection() {
-  const data    = loadMoods();
-  const dayData = data[modalDate] || {};
+function initMoodSection() {
+  const dayData = (loadMoods()[modalDate]) || {};
   selMood   = dayData.mood   ?? null;
   selLibido = dayData.libido ?? 0;
+  renderMoodSection();
+}
 
+function renderMoodSection() {
   document.getElementById('mood-pills').innerHTML = MOODS.map((m, i) => {
     const isSel = selMood === i;
     return `<button class="mood-pill${isSel ? ' selected' : ''}"
@@ -670,6 +698,7 @@ function saveDayMood() {
 
 /* ── State ── */
 let calYear, calMonth, modalDate = null, myChart = null, chartDays = 7, selSubs = new Set(), curCat = 'supplements';
+let moodChartDays = 7, myMoodChart = null, myLibidoChart = null;
 const now = new Date();
 calYear  = now.getFullYear();
 calMonth = now.getMonth();
@@ -683,6 +712,7 @@ function showView(name, btn) {
   document.getElementById('view-'+name).classList.add('active');
   btn.classList.add('active');
   if (name === 'chart')      renderChart();
+  if (name === 'mood')       renderMoodChart();
   if (name === 'substances') renderSubstances(curCat);
 }
 
@@ -784,7 +814,7 @@ function openModal(dateStr) {
   document.getElementById('inp-time').value = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
   onCatChange();
   renderModalEntries();
-  renderMoodSection();
+  initMoodSection();
   document.getElementById('overlay').classList.add('open');
 }
 function closeModal() { document.getElementById('overlay').classList.remove('open'); modalDate = null; }
@@ -1008,6 +1038,136 @@ function renderSubstances(cat) {
       </div>
     </div>
   `).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOOD CHART
+═══════════════════════════════════════════════════════════════════ */
+function setMoodRange(days, btn) {
+  moodChartDays = days;
+  document.querySelectorAll('.mood-range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMoodChart();
+}
+
+function renderMoodChart() {
+  const moodData = loadMoods();
+  const nowMs    = Date.now();
+  const labels   = [], moodVals = [], libidoVals = [];
+
+  for (let i = moodChartDays - 1; i >= 0; i--) {
+    const d       = new Date(nowMs - i * 86400000);
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const lbl     = d.toLocaleDateString('de-DE', { day:'numeric', month:'short' });
+    labels.push(lbl);
+    const entry = moodData[dateStr];
+    moodVals.push(  entry?.mood   ?? null);
+    libidoVals.push(entry?.libido ?? null);
+  }
+
+  const chartBase = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161b22', borderColor: '#30363d', borderWidth: 1,
+        titleColor: '#7d8590', bodyColor: '#e6edf3', padding: 10
+      }
+    }
+  };
+  const xScale = {
+    ticks: { color: '#7d8590', maxTicksLimit: moodChartDays <= 7 ? 7 : moodChartDays <= 30 ? 10 : 12, font: { size: 10 }, maxRotation: 0 },
+    grid:  { color: '#21262d' }
+  };
+
+  /* — Mood line chart — */
+  if (myMoodChart) { myMoodChart.destroy(); myMoodChart = null; }
+  myMoodChart = new Chart(document.getElementById('moodChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: moodVals,
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.08)',
+        borderWidth: 2,
+        pointRadius: moodVals.map(v => v !== null ? 6 : 0),
+        pointBackgroundColor: moodVals.map(v => v !== null ? MOODS[v].color : 'transparent'),
+        pointBorderColor:     moodVals.map(v => v !== null ? MOODS[v].color : 'transparent'),
+        pointBorderWidth: 2,
+        fill: true,
+        tension: 0.35,
+        spanGaps: false,
+      }]
+    },
+    options: {
+      ...chartBase,
+      plugins: {
+        ...chartBase.plugins,
+        tooltip: {
+          ...chartBase.plugins.tooltip,
+          callbacks: {
+            label: ctx => ctx.raw !== null ? `Stimmung: ${MOODS[ctx.raw].label}` : 'kein Eintrag'
+          }
+        }
+      },
+      scales: {
+        x: xScale,
+        y: {
+          min: -0.5, max: 5.5,
+          ticks: {
+            stepSize: 1,
+            color: ctx => MOODS[ctx.tick.value]?.color ?? '#7d8590',
+            callback: val => MOODS[Math.round(val)]?.label ?? '',
+            font: { size: 10 }
+          },
+          grid: { color: '#21262d' }
+        }
+      }
+    }
+  });
+
+  /* — Libido bar chart — */
+  if (myLibidoChart) { myLibidoChart.destroy(); myLibidoChart = null; }
+  myLibidoChart = new Chart(document.getElementById('libidoChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: libidoVals,
+        backgroundColor: libidoVals.map(v => v !== null ? `rgba(255,166,87,${0.25 + v * 0.13})` : 'transparent'),
+        borderColor:      libidoVals.map(v => v !== null ? '#ffa657' : 'transparent'),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      ...chartBase,
+      plugins: {
+        ...chartBase.plugins,
+        tooltip: {
+          ...chartBase.plugins.tooltip,
+          callbacks: {
+            label: ctx => ctx.raw !== null ? `Libido: ${'🔥'.repeat(ctx.raw)} (${ctx.raw}/5)` : 'kein Eintrag'
+          }
+        }
+      },
+      scales: {
+        x: xScale,
+        y: {
+          min: 0, max: 5,
+          ticks: {
+            stepSize: 1,
+            color: '#7d8590',
+            callback: val => val > 0 ? '🔥'.repeat(val) : '—',
+            font: { size: 10 }
+          },
+          grid: { color: '#21262d' }
+        }
+      }
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════
