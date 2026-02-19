@@ -279,6 +279,58 @@
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
+    /* ── Mood & Libido ── */
+    .mood-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .mood-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .mood-pill {
+      padding: 5px 11px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all .15s;
+      background: var(--bg);
+      color: var(--muted);
+    }
+    .mood-pill:hover { color: var(--text); border-color: var(--muted); }
+    .mood-pill.selected { font-weight: 600; color: #0d1117; border-color: transparent; }
+    .libido-btns { display: flex; gap: 5px; margin-top: 6px; align-items: center; flex-wrap: wrap; }
+    .libido-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 9px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all .15s;
+      line-height: 1;
+      color: var(--muted);
+    }
+    .libido-btn:hover { border-color: #ffa657; }
+    .libido-btn.active { background: rgba(255,166,87,.2); border-color: #ffa657; color: var(--text); }
+    .libido-label { font-size: 12px; color: var(--muted); margin-left: 4px; }
+    /* Calendar mood/libido indicators */
+    .day-mood {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-top: 3px;
+      font-weight: 600;
+      display: inline-block;
+      line-height: 1.6;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .day-libido { font-size: 9px; margin-top: 2px; line-height: 1.4; color: var(--muted); }
+
     @media (max-width: 900px) {
       .chart-layout { grid-template-columns: 1fr; }
     }
@@ -364,6 +416,18 @@
     </div>
     <div class="modal-body">
       <div id="modal-entries"></div>
+      <div class="mood-card">
+        <div class="form-title">Tagesgefühl &amp; Libido</div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>Stimmung</label>
+          <div class="mood-pills" id="mood-pills"></div>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>Libido (1–5)</label>
+          <div class="libido-btns" id="libido-btns"></div>
+        </div>
+        <button class="btn-primary" onclick="saveDayMood()">Gefühl speichern</button>
+      </div>
       <div class="add-form">
         <div class="form-title">+ Neue Einnahme</div>
         <div class="form-row cols-2">
@@ -539,6 +603,71 @@ const COLORS = ['#58a6ff','#3fb950','#f78166','#bc8cff','#ffa657','#79c0ff','#d2
 function load()     { try { return JSON.parse(localStorage.getItem('strack') || '[]'); } catch { return []; } }
 function save(arr)  { localStorage.setItem('strack', JSON.stringify(arr)); }
 
+/* ── Mood & Libido Storage ── */
+function loadMoods()       { try { return JSON.parse(localStorage.getItem('mtrack') || '{}'); } catch { return {}; } }
+function saveMoods(data)   { localStorage.setItem('mtrack', JSON.stringify(data)); }
+
+/* ── Mood Scale ── */
+const MOODS = [
+  { label:'ängstlich',    color:'#ff7b72' },
+  { label:'depressiv',    color:'#f0883e' },
+  { label:'antriebslos',  color:'#d29922' },
+  { label:'normal',       color:'#7d8590' },
+  { label:'gut gelaunt',  color:'#3fb950' },
+  { label:'selbstbewusst',color:'#58a6ff' },
+];
+
+let selMood   = null;  // 0–5 index, null = not set
+let selLibido = 0;     // 0 = not set, 1–5
+
+function renderMoodSection() {
+  const data    = loadMoods();
+  const dayData = data[modalDate] || {};
+  selMood   = dayData.mood   ?? null;
+  selLibido = dayData.libido ?? 0;
+
+  document.getElementById('mood-pills').innerHTML = MOODS.map((m, i) => {
+    const isSel = selMood === i;
+    return `<button class="mood-pill${isSel ? ' selected' : ''}"
+              style="${isSel ? `background:${m.color};` : ''}"
+              onclick="selectMood(${i})">${m.label}</button>`;
+  }).join('');
+
+  const libHtml = [1,2,3,4,5].map(n =>
+    `<button class="libido-btn${selLibido >= n ? ' active' : ''}" onclick="selectLibido(${n})">🔥</button>`
+  ).join('');
+  const libLabel = selLibido > 0
+    ? `<span class="libido-label">${selLibido}/5</span>`
+    : `<span class="libido-label">nicht gesetzt</span>`;
+  document.getElementById('libido-btns').innerHTML = libHtml + libLabel;
+}
+
+function selectMood(idx) {
+  selMood = (selMood === idx) ? null : idx;
+  renderMoodSection();
+}
+
+function selectLibido(val) {
+  selLibido = (selLibido === val) ? 0 : val;
+  renderMoodSection();
+}
+
+function saveDayMood() {
+  const data = loadMoods();
+  if (selMood === null && selLibido === 0) {
+    delete data[modalDate];
+  } else {
+    data[modalDate] = {};
+    if (selMood !== null) data[modalDate].mood   = selMood;
+    if (selLibido > 0)    data[modalDate].libido = selLibido;
+  }
+  saveMoods(data);
+  renderCalendar();
+  const btn = document.querySelector('.mood-card .btn-primary');
+  btn.textContent = 'Gespeichert ✓';
+  setTimeout(() => { btn.textContent = 'Gefühl speichern'; }, 1500);
+}
+
 /* ── State ── */
 let calYear, calMonth, modalDate = null, myChart = null, chartDays = 7, selSubs = new Set(), curCat = 'supplements';
 const now = new Date();
@@ -563,8 +692,9 @@ function showView(name, btn) {
 const MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 
 function renderCalendar() {
-  const entries = load();
-  const byDate  = {};
+  const entries   = load();
+  const moodData  = loadMoods();
+  const byDate    = {};
   entries.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
 
   document.getElementById('cal-title').textContent = `${MONTHS_DE[calMonth]} ${calYear}`;
@@ -607,6 +737,25 @@ function renderCalendar() {
       cnt.textContent = dayEntries.length + ' Einnahme' + (dayEntries.length > 1 ? 'n' : '');
       el.appendChild(cnt);
     }
+
+    const dayMood = moodData[dateStr];
+    if (dayMood) {
+      if (dayMood.mood !== undefined && dayMood.mood !== null) {
+        const m      = MOODS[dayMood.mood];
+        const moodEl = document.createElement('div');
+        moodEl.className = 'day-mood';
+        moodEl.style.cssText = `background:${m.color}22;color:${m.color};border:1px solid ${m.color}44;`;
+        moodEl.textContent = m.label;
+        el.appendChild(moodEl);
+      }
+      if (dayMood.libido) {
+        const libEl = document.createElement('div');
+        libEl.className = 'day-libido';
+        libEl.textContent = '🔥'.repeat(dayMood.libido);
+        el.appendChild(libEl);
+      }
+    }
+
     grid.appendChild(el);
   }
 }
@@ -635,6 +784,7 @@ function openModal(dateStr) {
   document.getElementById('inp-time').value = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
   onCatChange();
   renderModalEntries();
+  renderMoodSection();
   document.getElementById('overlay').classList.add('open');
 }
 function closeModal() { document.getElementById('overlay').classList.remove('open'); modalDate = null; }
