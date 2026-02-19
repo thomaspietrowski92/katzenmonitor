@@ -1,961 +1,871 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Katzen-Überwachung - VDO.Ninja Multi-View</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #fff;
-            padding: 10px;
-        }
-        
-        h1 {
-            text-align: center;
-            padding: 15px;
-            background-color: #2a2a2a;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-        
-        .container {
-            column-count: 2;
-            column-gap: 15px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        @media (max-width: 1200px) {
-            .container {
-                column-count: 1;
-            }
-        }
-        
-        .stream-box {
-            background-color: #2a2a2a;
-            border-radius: 5px;
-            padding: 10px;
-            display: inline-block;
-            width: 100%;
-            margin-bottom: 15px;
-            break-inside: avoid;
-        }
-        
-        .stream-wrapper {
-            position: relative;
-            background-color: #000;
-            border-radius: 5px;
-            overflow: hidden;
-            aspect-ratio: 16 / 9;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        
-        .stream-wrapper iframe {
-            transition: transform 0.3s ease;
-        }
-        
-        .stream-wrapper.rotate-90 iframe {
-            transform: rotate(90deg);
-        }
-        
-        .stream-wrapper.rotate-180 iframe {
-            transform: rotate(180deg);
-        }
-        
-        .stream-wrapper.rotate-270 iframe {
-            transform: rotate(270deg);
-        }
-        
-        /* Frame size variants */
-        .stream-box.size-small .stream-wrapper {
-            height: 150px;
-        }
-        
-        .stream-box.size-medium .stream-wrapper {
-            height: 250px;
-        }
-        
-        .stream-box.size-large .stream-wrapper {
-            height: 350px;
-        }
-        
-        .stream-box.size-xlarge .stream-wrapper {
-            height: 450px;
-        }
-        
-        .stream-box.size-xxlarge .stream-wrapper {
-            height: 600px;
-        }
-        
-        .stream-label {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 14px;
-            z-index: 10;
-        }
-        
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .room-name-input {
-            padding: 6px 8px;
-            background-color: #3a3a3a;
-            border: 1px solid #555;
-            border-radius: 3px;
-            color: #fff;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        
-        .room-name-input:focus {
-            outline: none;
-            border-color: #4a9eff;
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        
-        input[type="text"] {
-            flex: 1;
-            padding: 8px;
-            background-color: #3a3a3a;
-            border: 1px solid #555;
-            border-radius: 3px;
-            color: #fff;
-            font-size: 13px;
-        }
-        
-        input[type="text"]::placeholder {
-            color: #888;
-        }
-        
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #4a9eff;
-        }
-        
-        button {
-            padding: 8px 15px;
-            background-color: #4a9eff;
-            border: none;
-            border-radius: 3px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        
-        button:hover {
-            background-color: #3a8eef;
-        }
-        
-        button:active {
-            background-color: #2a7edf;
-        }
-        
-        .clear-btn {
-            background-color: #666;
-            padding: 8px 12px;
-        }
-        
-        .clear-btn:hover {
-            background-color: #777;
-        }
-        
-        .rotate-btn {
-            background-color: #ff9500;
-            padding: 8px 12px;
-            flex: 1;
-        }
-        
-        .rotate-btn:hover {
-            background-color: #ff8500;
-        }
-        
-        .size-selector {
-            display: flex;
-            gap: 3px;
-            margin-top: 5px;
-        }
-        
-        .size-btn {
-            flex: 1;
-            padding: 6px 8px;
-            background-color: #555;
-            font-size: 11px;
-        }
-        
-        .size-btn:hover {
-            background-color: #666;
-        }
-        
-        .size-btn.active {
-            background-color: #4a9eff;
-        }
-        
-        .size-btn.active:hover {
-            background-color: #3a8eef;
-        }
-        
-        /* Password Overlay */
-        #password-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        
-        #password-overlay.hidden {
-            display: none;
-        }
-        
-        .password-box {
-            background-color: #2a2a2a;
-            border: 2px solid #4a9eff;
-            border-radius: 10px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
-            width: 90%;
-        }
-        
-        .password-box h2 {
-            margin-bottom: 20px;
-            color: #4a9eff;
-        }
-        
-        .password-box input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            background-color: #3a3a3a;
-            border: 1px solid #555;
-            border-radius: 5px;
-            color: #fff;
-            font-size: 16px;
-            text-align: center;
-        }
-        
-        .password-box input:focus {
-            outline: none;
-            border-color: #4a9eff;
-        }
-        
-        .password-box button {
-            width: 100%;
-            padding: 12px;
-            background-color: #4a9eff;
-            border: none;
-            border-radius: 5px;
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .password-box button:hover {
-            background-color: #3a8eef;
-        }
-        
-        .password-error {
-            color: #ff4444;
-            margin-top: 10px;
-            font-size: 14px;
-            display: none;
-        }
-        
-        .password-error.show {
-            display: block;
-        }
-        
-        #main-content {
-            filter: blur(0px);
-            transition: filter 0.3s ease;
-        }
-        
-        #main-content.blurred {
-            filter: blur(10px);
-            pointer-events: none;
-        }
-        
-        .room-name {
-            font-size: 12px;
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-        
-        .info {
-            text-align: center;
-            margin: 20px;
-            padding: 15px;
-            background-color: #2a2a2a;
-            border-radius: 5px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        
-        .info code {
-            background-color: #3a3a3a;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-        
-        .placeholder-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #666;
-            font-size: 14px;
-            text-align: center;
-        }
-        
-        @media (max-width: 800px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Substanz &amp; Supplement Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --accent: #58a6ff;
+      --c-supp: #3fb950;
+      --c-horm: #f78166;
+      --c-rc:   #bc8cff;
+      --c-noot: #79c0ff;
+      --c-pept: #ffa657;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-weight: 700; font-size: 17px; color: var(--accent); white-space: nowrap; letter-spacing: -0.3px; }
+    nav { display: flex; gap: 2px; }
+    nav button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: color .15s, background .15s;
+    }
+    nav button:hover { color: var(--text); background: var(--surface2); }
+    nav button.active { color: var(--accent); background: rgba(88,166,255,.12); font-weight: 500; }
+
+    /* ── Views ── */
+    .view { display: none; padding: 20px; max-width: 1400px; margin: 0 auto; }
+    .view.active { display: block; }
+
+    /* ── Calendar ── */
+    .cal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .cal-header h2 { font-size: 20px; font-weight: 600; min-width: 200px; }
+    .btn-icon {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .cal-weekday { text-align: center; padding: 8px 4px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .cal-day {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 8px 6px;
+      min-height: 80px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .cal-day:hover { border-color: var(--accent); background: var(--surface2); }
+    .cal-day.today { border-color: var(--accent); }
+    .cal-day.today .day-num { color: var(--accent); font-weight: 700; }
+    .cal-day.other-month { opacity: .3; }
+    .cal-day.empty { background: none; border: none; cursor: default; min-height: 0; }
+    .day-num { font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+    .day-dots { display: flex; flex-wrap: wrap; gap: 3px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .dot.supp { background: var(--c-supp); }
+    .dot.horm { background: var(--c-horm); }
+    .dot.rc   { background: var(--c-rc); }
+    .dot.noot { background: var(--c-noot); }
+    .dot.pept { background: var(--c-pept); }
+    .day-count { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Modal ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.72);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 48px rgba(0,0,0,.6);
+    }
+    .modal-head {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+    .modal-head h3 { font-size: 16px; font-weight: 600; }
+    .btn-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .btn-close:hover { color: var(--text); background: var(--surface2); }
+    .modal-body { padding: 18px 20px 22px; }
+
+    /* Entry list */
+    .entry-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      background: var(--surface2);
+      border-radius: 7px;
+      margin-bottom: 5px;
+    }
+    .entry-time { font-size: 12px; color: var(--muted); min-width: 40px; font-variant-numeric: tabular-nums; }
+    .cat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .entry-name { flex: 1; font-size: 13px; }
+    .entry-note { font-size: 11px; color: var(--muted); }
+    .entry-dose { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .btn-del { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+    .btn-del:hover { color: var(--c-horm); background: rgba(247,129,102,.12); }
+    .no-entries { color: var(--muted); font-size: 13px; text-align: center; padding: 14px; }
+
+    /* Add form */
+    .add-form {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    .form-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 12px; }
+    .form-row { display: grid; gap: 8px; margin-bottom: 8px; }
+    .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .fg { display: flex; flex-direction: column; gap: 4px; }
+    .fg label { font-size: 11px; color: var(--muted); }
+    .fg input, .fg select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 9px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 100%;
+    }
+    .fg input:focus, .fg select:focus { outline: none; border-color: var(--accent); }
+    .fg select option { background: var(--surface2); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      padding: 9px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .85; }
+
+    /* ── Chart View ── */
+    .chart-layout { display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: start; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .panel h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+    .sub-selector { max-height: 340px; overflow-y: auto; }
+    .cat-section { margin-bottom: 10px; }
+    .cat-head {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      padding: 2px 6px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cat-head::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+    .cat-head.supp::before { background: var(--c-supp); }
+    .cat-head.horm::before { background: var(--c-horm); }
+    .cat-head.rc::before   { background: var(--c-rc); }
+    .cat-head.noot::before { background: var(--c-noot); }
+    .cat-head.pept::before { background: var(--c-pept); }
+    .sub-row { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 5px; cursor: pointer; }
+    .sub-row:hover { background: var(--surface2); }
+    .sub-row input { cursor: pointer; accent-color: var(--accent); }
+    .sub-row label { font-size: 12px; cursor: pointer; flex: 1; line-height: 1.3; }
+    .range-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+    .range-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all .15s;
+    }
+    .range-btn:hover { border-color: var(--muted); color: var(--text); }
+    .range-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.1); }
+    .chart-wrap { position: relative; height: 380px; }
+    .chart-note { font-size: 11px; color: var(--muted); margin-top: 10px; text-align: center; }
+
+    /* ── Substances View ── */
+    .cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .cat-tab {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 7px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all .15s;
+    }
+    .cat-tab:hover { color: var(--text); }
+    .cat-tab.t-supp { border-color: var(--c-supp); color: var(--c-supp); background: rgba(63,185,80,.1); }
+    .cat-tab.t-horm { border-color: var(--c-horm); color: var(--c-horm); background: rgba(247,129,102,.1); }
+    .cat-tab.t-rc   { border-color: var(--c-rc);   color: var(--c-rc);   background: rgba(188,140,255,.1); }
+    .cat-tab.t-noot { border-color: var(--c-noot); color: var(--c-noot); background: rgba(121,192,255,.1); }
+    .cat-tab.t-pept { border-color: var(--c-pept); color: var(--c-pept); background: rgba(255,166,87,.1); }
+    .sub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; }
+    .sub-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 14px;
+      transition: border-color .15s;
+    }
+    .sub-card:hover { border-color: var(--border); }
+    .sub-card-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .sub-card-meta { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+    .sub-card-meta strong { color: var(--text); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    @media (max-width: 900px) {
+      .chart-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+      .cal-day { min-height: 56px; padding: 5px; }
+      .dot { width: 5px; height: 5px; }
+      header { gap: 12px; }
+      .logo { font-size: 15px; }
+      nav button { padding: 6px 10px; font-size: 13px; }
+    }
+  </style>
 </head>
 <body>
-    <!-- Password Overlay -->
-    <div id="password-overlay">
-        <div class="password-box">
-            <h2>🔒 Geschützter Bereich</h2>
-            <p>Bitte Passwort eingeben:</p>
-            <input type="password" id="password-input" placeholder="Passwort" autocomplete="off">
-            <button onclick="checkPassword()">Entsperren</button>
-            <div class="password-error" id="password-error">❌ Falsches Passwort!</div>
+
+<header>
+  <div class="logo">⚗️ Substanz Tracker</div>
+  <nav>
+    <button class="active" data-view="calendar" onclick="showView('calendar',this)">Kalender</button>
+    <button data-view="chart" onclick="showView('chart',this)">Blutspiegel</button>
+    <button data-view="substances" onclick="showView('substances',this)">Substanzen</button>
+  </nav>
+</header>
+
+<!-- ── Calendar View ── -->
+<div id="view-calendar" class="view active">
+  <div class="cal-header">
+    <button class="btn-icon" onclick="changeMonth(-1)">&#8592;</button>
+    <h2 id="cal-title"></h2>
+    <button class="btn-icon" onclick="changeMonth(1)">&#8594;</button>
+    <button class="btn-icon" onclick="goToday()" style="margin-left:auto;font-size:12px">Heute</button>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<!-- ── Chart View ── -->
+<div id="view-chart" class="view">
+  <div class="chart-layout">
+    <div>
+      <div class="panel">
+        <h3>Substanzen</h3>
+        <div class="sub-selector" id="sub-selector"></div>
+      </div>
+      <div class="panel">
+        <h3>Zeitraum</h3>
+        <div class="range-btns">
+          <button class="range-btn active" data-d="7"   onclick="setRange(7,this)">7 Tage</button>
+          <button class="range-btn"        data-d="30"  onclick="setRange(30,this)">30 Tage</button>
+          <button class="range-btn"        data-d="90"  onclick="setRange(90,this)">3 Monate</button>
+          <button class="range-btn"        data-d="180" onclick="setRange(180,this)">6 Monate</button>
+          <button class="range-btn"        data-d="365" onclick="setRange(365,this)">1 Jahr</button>
         </div>
+      </div>
     </div>
-    
-    <!-- Main Content -->
-    <div id="main-content" class="blurred">
-    <h1>🐱 Katzen-Überwachung</h1>
-    
-    <div class="container">
-        <!-- Stream 1 -->
-        <div class="stream-box size-medium" id="stream-box-1">
-            <div class="stream-wrapper" id="frame-container-1" data-rotation="0">
-                <div class="stream-label" id="label-1">📱 Wohnzimmer</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-1" placeholder="Raumname..." value="Wohnzimmer" onchange="saveRoomName(1)">
-                <div class="input-group">
-                    <input type="text" id="url-input-1" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(1)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(1)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(1)"><span id="rotation-text-1">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(1, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(1, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(1, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(1, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(1, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 2 -->
-        <div class="stream-box size-medium" id="stream-box-2">
-            <div class="stream-wrapper" id="frame-container-2" data-rotation="0">
-                <div class="stream-label" id="label-2">📱 Schlafzimmer</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-2" placeholder="Raumname..." value="Schlafzimmer" onchange="saveRoomName(2)">
-                <div class="input-group">
-                    <input type="text" id="url-input-2" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(2)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(2)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(2)"><span id="rotation-text-2">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(2, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(2, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(2, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(2, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(2, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 3 -->
-        <div class="stream-box size-medium" id="stream-box-3">
-            <div class="stream-wrapper" id="frame-container-3" data-rotation="0">
-                <div class="stream-label" id="label-3">📱 Küche</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-3" placeholder="Raumname..." value="Küche" onchange="saveRoomName(3)">
-                <div class="input-group">
-                    <input type="text" id="url-input-3" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(3)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(3)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(3)"><span id="rotation-text-3">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(3, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(3, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(3, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(3, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(3, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 4 -->
-        <div class="stream-box size-medium" id="stream-box-4">
-            <div class="stream-wrapper" id="frame-container-4" data-rotation="0">
-                <div class="stream-label" id="label-4">📱 Flur</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-4" placeholder="Raumname..." value="Flur" onchange="saveRoomName(4)">
-                <div class="input-group">
-                    <input type="text" id="url-input-4" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(4)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(4)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(4)"><span id="rotation-text-4">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(4, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(4, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(4, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(4, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(4, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 5 -->
-        <div class="stream-box size-medium" id="stream-box-5">
-            <div class="stream-wrapper" id="frame-container-5" data-rotation="0">
-                <div class="stream-label" id="label-5">📱 Balkon</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-5" placeholder="Raumname..." value="Balkon" onchange="saveRoomName(5)">
-                <div class="input-group">
-                    <input type="text" id="url-input-5" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(5)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(5)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(5)"><span id="rotation-text-5">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(5, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(5, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(5, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(5, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(5, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 6 -->
-        <div class="stream-box size-medium" id="stream-box-6">
-            <div class="stream-wrapper" id="frame-container-6" data-rotation="0">
-                <div class="stream-label" id="label-6">📱 Bad</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-6" placeholder="Raumname..." value="Bad" onchange="saveRoomName(6)">
-                <div class="input-group">
-                    <input type="text" id="url-input-6" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(6)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(6)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(6)"><span id="rotation-text-6">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(6, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(6, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(6, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(6, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(6, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stream 7 -->
-        <div class="stream-box size-medium" id="stream-box-7">
-            <div class="stream-wrapper" id="frame-container-7" data-rotation="0">
-                <div class="stream-label" id="label-7">📱 Garten</div>
-                <div class="placeholder-text">Kein Stream geladen</div>
-            </div>
-            <div class="controls">
-                <input type="text" class="room-name-input" id="room-name-7" placeholder="Raumname..." value="Garten" onchange="saveRoomName(7)">
-                <div class="input-group">
-                    <input type="text" id="url-input-7" placeholder="VDO.Ninja Link hier einfügen...">
-                    <button onclick="saveStream(7)">Speichern</button>
-                    <button class="clear-btn" onclick="clearStream(7)">×</button>
-                </div>
-                <div class="button-group">
-                    <button class="rotate-btn" onclick="rotateFrame(7)"><span id="rotation-text-7">🔄 0°</span></button>
-                </div>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="setSize(7, 'small')">Klein</button>
-                    <button class="size-btn active" onclick="setSize(7, 'medium')">Mittel</button>
-                    <button class="size-btn" onclick="setSize(7, 'large')">Groß</button>
-                    <button class="size-btn" onclick="setSize(7, 'xlarge')">XL</button>
-                    <button class="size-btn" onclick="setSize(7, 'xxlarge')">XXL</button>
-                </div>
-            </div>
-        </div>
+    <div class="panel">
+      <h3 id="chart-heading">Geschätzter Blutspiegel</h3>
+      <div class="chart-wrap">
+        <canvas id="bloodChart"></canvas>
+      </div>
+      <p class="chart-note">&#9888;&#65039; Werte basieren auf Halbwertszeit-Modell — kein Ersatz für Bluttests. Individuelle Werte können stark abweichen.</p>
     </div>
-    
-    <div class="info">
-        <strong>📝 Anleitung:</strong><br>
-        1. Gib einen eigenen Raumnamen im obersten Feld ein (wird automatisch gespeichert)<br>
-        2. Kopiere den VDO.Ninja View-Link von deinem Handy und füge ihn ein<br>
-        3. Klicke auf "Speichern" - der Link wird automatisch gespeichert und geladen<br>
-        4. Mit "🔄" kannst du das Bild drehen (0° → 90° → 180° → 270° → 0°)<br>
-        5. Wähle die Frame-Größe: Klein, Mittel, Groß, XL oder XXL<br>
-        6. Alle Einstellungen (Name, Link, Drehung, Größe) bleiben gespeichert<br>
-        7. Mit "×" kannst du einen Stream löschen
+  </div>
+</div>
+
+<!-- ── Substances View ── -->
+<div id="view-substances" class="view">
+  <div class="cat-tabs" id="cat-tabs">
+    <button class="cat-tab t-supp" onclick="switchCat('supplements',this)">Supplemente</button>
+    <button class="cat-tab" onclick="switchCat('hormones',this)">Hormone &amp; Steroide</button>
+    <button class="cat-tab" onclick="switchCat('rc',this)">Research Chemicals</button>
+    <button class="cat-tab" onclick="switchCat('nootropics',this)">Nootropika</button>
+    <button class="cat-tab" onclick="switchCat('peptides',this)">Peptide</button>
+  </div>
+  <div class="sub-grid" id="sub-grid"></div>
+</div>
+
+<!-- ── Log Modal ── -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">Einnahmen</h3>
+      <button class="btn-close" onclick="closeModal()">&#10005;</button>
     </div>
-    
-    </div><!-- End of main-content -->
-    
-    <script>
-        // Password Protection
-        const correctPasswords = ['Sissi', 'Sissy', 'sissi', 'sissy'];
-        
-        // Beim Laden der Seite gespeicherte Einstellungen wiederherstellen
-        window.addEventListener('DOMContentLoaded', function() {
-            const isUnlocked = sessionStorage.getItem('vdo-unlocked');
-            
-            // Check if password was already entered
-            if (isUnlocked === 'true') {
-                unlockContent();
-            }
-            
-            // Allow Enter key to submit password
-            const passwordInput = document.getElementById('password-input');
-            if (passwordInput) {
-                passwordInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        checkPassword();
-                    }
-                });
-                passwordInput.focus();
-            }
-        });
-        
-        function checkPassword() {
-            const input = document.getElementById('password-input');
-            const error = document.getElementById('password-error');
-            
-            if (correctPasswords.includes(input.value)) {
-                // Correct password
-                sessionStorage.setItem('vdo-unlocked', 'true');
-                unlockContent();
-            } else {
-                // Wrong password
-                error.classList.add('show');
-                input.value = '';
-                input.focus();
-                
-                // Hide error after 2 seconds
-                setTimeout(() => {
-                    error.classList.remove('show');
-                }, 2000);
-            }
+    <div class="modal-body">
+      <div id="modal-entries"></div>
+      <div class="add-form">
+        <div class="form-title">+ Neue Einnahme</div>
+        <div class="form-row cols-2">
+          <div class="fg">
+            <label>Uhrzeit</label>
+            <input type="time" id="inp-time">
+          </div>
+          <div class="fg">
+            <label>Kategorie</label>
+            <select id="inp-cat" onchange="onCatChange()">
+              <option value="supplements">Supplemente</option>
+              <option value="hormones">Hormone &amp; Steroide</option>
+              <option value="rc">Research Chemicals</option>
+              <option value="nootropics">Nootropika</option>
+              <option value="peptides">Peptide</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="fg">
+            <label>Substanz</label>
+            <select id="inp-sub" onchange="onSubChange()">
+              <option value="">&#8212; Wählen &#8212;</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label id="dose-lbl">Dosis (mg)</label>
+            <input type="number" id="inp-dose" placeholder="Menge" min="0" step="0.01">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="fg">
+            <label>Notiz (optional)</label>
+            <input type="text" id="inp-note" placeholder="z.B. mit Mahlzeit, subkutan ...">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="addEntry()">Einnahme speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   SUBSTANCE DATABASE
+═══════════════════════════════════════════════════════════════════ */
+const DB = {
+  supplements: [
+    { name:'Berberine',            halfLife:3.5,  unit:'mg',  dose:500  },
+    { name:'Resveratrol',          halfLife:1.5,  unit:'mg',  dose:250  },
+    { name:'Grüntee (EGCG)',       halfLife:3,    unit:'mg',  dose:400  },
+    { name:'Vitamin D3',           halfLife:1440, unit:'IU',  dose:5000 },
+    { name:'Vitamin K2 (MK-7)',    halfLife:72,   unit:'mcg', dose:100  },
+    { name:'Vitamin C',            halfLife:3,    unit:'mg',  dose:1000 },
+    { name:'Magnesium Glycinat',   halfLife:24,   unit:'mg',  dose:400  },
+    { name:'Zink',                 halfLife:48,   unit:'mg',  dose:25   },
+    { name:'Omega-3 (EPA/DHA)',    halfLife:48,   unit:'mg',  dose:2000 },
+    { name:'NAC',                  halfLife:6,    unit:'mg',  dose:600  },
+    { name:'Alpha-Liponsäure',     halfLife:1,    unit:'mg',  dose:300  },
+    { name:'CoQ10 (Ubiquinol)',    halfLife:33,   unit:'mg',  dose:200  },
+    { name:'Quercetin',            halfLife:11,   unit:'mg',  dose:500  },
+    { name:'Curcumin',             halfLife:8,    unit:'mg',  dose:500  },
+    { name:'Fisetin',              halfLife:3,    unit:'mg',  dose:500  },
+    { name:'Astaxanthin',          halfLife:16,   unit:'mg',  dose:12   },
+    { name:'NMN',                  halfLife:2.5,  unit:'mg',  dose:500  },
+    { name:'NR (Nicotinamid-R.)',   halfLife:2,    unit:'mg',  dose:300  },
+    { name:'Spermidin',            halfLife:4,    unit:'mg',  dose:10   },
+    { name:'Taurin',               halfLife:2,    unit:'g',   dose:2    },
+    { name:'Kreatin',              halfLife:3,    unit:'g',   dose:5    },
+    { name:'L-Carnitin',           halfLife:15,   unit:'mg',  dose:2000 },
+  ],
+  hormones: [
+    { name:'Testosteron Enanthat',       halfLife:168, unit:'mg',  dose:250 },
+    { name:'Testosteron Cypionat',       halfLife:192, unit:'mg',  dose:250 },
+    { name:'Testosteron Propionat',      halfLife:48,  unit:'mg',  dose:100 },
+    { name:'Testosteron Undecanoat',     halfLife:840, unit:'mg',  dose:250 },
+    { name:'Trenbolon Acetat',           halfLife:48,  unit:'mg',  dose:50  },
+    { name:'Trenbolon Enanthat',         halfLife:168, unit:'mg',  dose:200 },
+    { name:'Nandrolon Decanoat (Deca)',  halfLife:360, unit:'mg',  dose:200 },
+    { name:'Boldenon Undecylenat (EQ)',  halfLife:336, unit:'mg',  dose:300 },
+    { name:'Oxandrolon (Anavar)',        halfLife:9,   unit:'mg',  dose:40  },
+    { name:'Stanozolol (Winstrol)',      halfLife:9,   unit:'mg',  dose:50  },
+    { name:'Metandienon (Dianabol)',     halfLife:4.5, unit:'mg',  dose:30  },
+    { name:'Pregnenolon',               halfLife:12,  unit:'mg',  dose:50  },
+    { name:'DHEA',                      halfLife:2,   unit:'mg',  dose:50  },
+    { name:'Estradiol (E2)',             halfLife:17,  unit:'mg',  dose:2   },
+    { name:'Progesteron',               halfLife:20,  unit:'mg',  dose:100 },
+    { name:'Anastrozol',                halfLife:46,  unit:'mg',  dose:0.5 },
+    { name:'Tamoxifen',                 halfLife:168, unit:'mg',  dose:20  },
+    { name:'HGH (Wachstumshormon)',     halfLife:3.5, unit:'IU',  dose:4   },
+    { name:'Insulin (kurzwirksam)',     halfLife:0.25,unit:'IU',  dose:10  },
+    { name:'T3 (Trijodthyronin)',       halfLife:24,  unit:'mcg', dose:25  },
+    { name:'T4 (Thyroxin)',             halfLife:168, unit:'mcg', dose:100 },
+  ],
+  rc: [
+    { name:'MK-677 (Ibutamoren)',      halfLife:24, unit:'mg', dose:25  },
+    { name:'RAD-140 (Testolone)',      halfLife:60, unit:'mg', dose:10  },
+    { name:'LGD-4033 (Ligandrol)',     halfLife:30, unit:'mg', dose:5   },
+    { name:'Ostarine (MK-2866)',       halfLife:24, unit:'mg', dose:25  },
+    { name:'GW-501516 (Cardarine)',    halfLife:24, unit:'mg', dose:10  },
+    { name:'SR9009 (Stenabolic)',      halfLife:4,  unit:'mg', dose:10  },
+    { name:'SR9011',                   halfLife:4,  unit:'mg', dose:20  },
+    { name:'YK-11',                    halfLife:12, unit:'mg', dose:5   },
+    { name:'S4 (Andarine)',            halfLife:4,  unit:'mg', dose:25  },
+    { name:'S23',                      halfLife:12, unit:'mg', dose:10  },
+    { name:'AC-262536',                halfLife:6,  unit:'mg', dose:30  },
+    { name:'RU58841',                  halfLife:1.5,unit:'mg', dose:50  },
+    { name:'ACP-105',                  halfLife:3,  unit:'mg', dose:5   },
+    { name:'LGD-3303',                 halfLife:6,  unit:'mg', dose:10  },
+    { name:'RAD-150 (TLB-150)',        halfLife:96, unit:'mg', dose:10  },
+  ],
+  nootropics: [
+    { name:'Modafinil',              halfLife:15, unit:'mg',  dose:200 },
+    { name:'Armodafinil',            halfLife:15, unit:'mg',  dose:150 },
+    { name:'Phenylpiracetam',        halfLife:3,  unit:'mg',  dose:100 },
+    { name:'Aniracetam',             halfLife:1.5,unit:'mg',  dose:750 },
+    { name:'Oxiracetam',             halfLife:8,  unit:'mg',  dose:800 },
+    { name:'Noopept',                halfLife:1,  unit:'mg',  dose:10  },
+    { name:'Alpha-GPC',              halfLife:6,  unit:'mg',  dose:300 },
+    { name:'CDP-Cholin (Citicolin)', halfLife:72, unit:'mg',  dose:250 },
+    { name:"Lion's Mane",            halfLife:24, unit:'mg',  dose:500 },
+    { name:'Bacopa Monnieri',        halfLife:24, unit:'mg',  dose:300 },
+    { name:'L-Theanin',              halfLife:2.5,unit:'mg',  dose:200 },
+    { name:'L-Tyrosin',              halfLife:3,  unit:'mg',  dose:500 },
+    { name:'Ashwagandha (KSM-66)',   halfLife:24, unit:'mg',  dose:300 },
+    { name:'Rhodiola Rosea',         halfLife:6,  unit:'mg',  dose:200 },
+    { name:'Phosphatidylserin',      halfLife:12, unit:'mg',  dose:300 },
+    { name:'DMAE',                   halfLife:2,  unit:'mg',  dose:200 },
+    { name:'Huperzin A',             halfLife:12, unit:'mcg', dose:200 },
+    { name:'Vinpocetine',            halfLife:3,  unit:'mg',  dose:10  },
+    { name:'PRL-8-53',               halfLife:2,  unit:'mg',  dose:5   },
+    { name:'NSI-189',                halfLife:5,  unit:'mg',  dose:40  },
+    { name:'Uridine Monophosphat',   halfLife:3,  unit:'mg',  dose:500 },
+  ],
+  peptides: [
+    { name:'HCG',                   halfLife:36,  unit:'IU',  dose:500  },
+    { name:'HMG',                   halfLife:36,  unit:'IU',  dose:75   },
+    { name:'Melanotan 2',           halfLife:24,  unit:'mg',  dose:0.5  },
+    { name:'PT-141 (Bremelanotid)', halfLife:2,   unit:'mg',  dose:1.75 },
+    { name:'BPC-157',               halfLife:4,   unit:'mcg', dose:500  },
+    { name:'TB-500 (Thymosin β4)',  halfLife:96,  unit:'mg',  dose:5    },
+    { name:'IGF-1 LR3',             halfLife:20,  unit:'mcg', dose:100  },
+    { name:'IGF-1 DES',             halfLife:0.33,unit:'mcg', dose:50   },
+    { name:'GHK-Cu',                halfLife:2,   unit:'mg',  dose:2    },
+    { name:'Epithalon',             halfLife:24,  unit:'mg',  dose:10   },
+    { name:'Semax',                 halfLife:0.5, unit:'mg',  dose:0.5  },
+    { name:'Selank',                halfLife:1,   unit:'mg',  dose:0.25 },
+    { name:'DSIP',                  halfLife:1,   unit:'mg',  dose:0.5  },
+    { name:'CJC-1295 (DAC)',        halfLife:192, unit:'mg',  dose:2    },
+    { name:'Ipamorelin',            halfLife:2,   unit:'mg',  dose:0.3  },
+    { name:'GHRP-2',                halfLife:1.5, unit:'mg',  dose:0.1  },
+    { name:'GHRP-6',                halfLife:1.5, unit:'mg',  dose:0.1  },
+    { name:'Hexarelin',             halfLife:3,   unit:'mg',  dose:0.1  },
+    { name:'AOD-9604',              halfLife:4,   unit:'mg',  dose:0.3  },
+    { name:'Thymosin Alpha-1',      halfLife:2,   unit:'mg',  dose:1.5  },
+    { name:'SS-31 (Elamipretide)',  halfLife:4,   unit:'mg',  dose:5    },
+    { name:'Kisspeptin-10',         halfLife:1.5, unit:'mcg', dose:100  },
+    { name:'NAD+ (IV/SubQ)',        halfLife:1,   unit:'mg',  dose:500  },
+  ],
+};
+
+const CAT = {
+  supplements: { label:'Supplemente',         color:'#3fb950', cls:'supp', tab:'t-supp' },
+  hormones:    { label:'Hormone & Steroide',  color:'#f78166', cls:'horm', tab:'t-horm' },
+  rc:          { label:'Research Chemicals',  color:'#bc8cff', cls:'rc',   tab:'t-rc'   },
+  nootropics:  { label:'Nootropika',          color:'#79c0ff', cls:'noot', tab:'t-noot' },
+  peptides:    { label:'Peptide',             color:'#ffa657', cls:'pept', tab:'t-pept' },
+};
+
+const COLORS = ['#58a6ff','#3fb950','#f78166','#bc8cff','#ffa657','#79c0ff','#d29922','#7ee787','#ff7b72','#e3b341','#a371f7','#56d364','#f0883e'];
+
+/* ── Storage ── */
+function load()     { try { return JSON.parse(localStorage.getItem('strack') || '[]'); } catch { return []; } }
+function save(arr)  { localStorage.setItem('strack', JSON.stringify(arr)); }
+
+/* ── State ── */
+let calYear, calMonth, modalDate = null, myChart = null, chartDays = 7, selSubs = new Set(), curCat = 'supplements';
+const now = new Date();
+calYear  = now.getFullYear();
+calMonth = now.getMonth();
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEW SWITCHING
+═══════════════════════════════════════════════════════════════════ */
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'chart')      renderChart();
+  if (name === 'substances') renderSubstances(curCat);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CALENDAR
+═══════════════════════════════════════════════════════════════════ */
+const MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+function renderCalendar() {
+  const entries = load();
+  const byDate  = {};
+  entries.forEach(e => { (byDate[e.date] = byDate[e.date] || []).push(e); });
+
+  document.getElementById('cal-title').textContent = `${MONTHS_DE[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  ['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-weekday';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  let startDow = new Date(calYear, calMonth, 1).getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+  for (let i = 0; i < startDow; i++) {
+    const el = document.createElement('div'); el.className = 'cal-day empty'; grid.appendChild(el);
+  }
+
+  const today = new Date();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(d)}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (isToday(d) ? ' today' : '');
+    el.onclick = () => openModal(dateStr);
+
+    const numEl = document.createElement('div'); numEl.className = 'day-num'; numEl.textContent = d;
+    el.appendChild(numEl);
+
+    const dayEntries = byDate[dateStr] || [];
+    if (dayEntries.length) {
+      const dotsEl = document.createElement('div'); dotsEl.className = 'day-dots';
+      [...new Set(dayEntries.map(e => e.category))].forEach(cat => {
+        const dot = document.createElement('div'); dot.className = 'dot ' + (CAT[cat]?.cls || '');
+        dotsEl.appendChild(dot);
+      });
+      el.appendChild(dotsEl);
+      const cnt = document.createElement('div'); cnt.className = 'day-count';
+      cnt.textContent = dayEntries.length + ' Einnahme' + (dayEntries.length > 1 ? 'n' : '');
+      el.appendChild(cnt);
+    }
+    grid.appendChild(el);
+  }
+}
+
+function isToday(d) {
+  const t = new Date();
+  return t.getFullYear()===calYear && t.getMonth()===calMonth && t.getDate()===d;
+}
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+function goToday() { const t = new Date(); calYear = t.getFullYear(); calMonth = t.getMonth(); renderCalendar(); }
+function pad(n) { return String(n).padStart(2,'0'); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════════════ */
+function openModal(dateStr) {
+  modalDate = dateStr;
+  const [y,m,d] = dateStr.split('-');
+  document.getElementById('modal-title').textContent = `${parseInt(d)}. ${MONTHS_DE[parseInt(m)-1]} ${y}`;
+  const t = new Date();
+  document.getElementById('inp-time').value = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  onCatChange();
+  renderModalEntries();
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); modalDate = null; }
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay')) closeModal();
+});
+
+function renderModalEntries() {
+  const entries = load().filter(e => e.date === modalDate).sort((a,b) => a.time.localeCompare(b.time));
+  const el = document.getElementById('modal-entries');
+  if (!entries.length) { el.innerHTML = '<div class="no-entries">Noch keine Einnahmen für diesen Tag</div>'; return; }
+  el.innerHTML = entries.map(e => `
+    <div class="entry-item">
+      <span class="entry-time">${e.time}</span>
+      <div class="cat-dot" style="background:${CAT[e.category]?.color||'#888'}"></div>
+      <span class="entry-name">${e.substance}${e.note ? ` <span class="entry-note">(${e.note})</span>` : ''}</span>
+      <span class="entry-dose">${e.dose} ${e.unit}</span>
+      <button class="btn-del" onclick="delEntry('${e.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function onCatChange() {
+  const cat = document.getElementById('inp-cat').value;
+  const sel = document.getElementById('inp-sub');
+  sel.innerHTML = '<option value="">— Wählen —</option>' +
+    (DB[cat]||[]).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+  onSubChange();
+}
+function onSubChange() {
+  const cat = document.getElementById('inp-cat').value;
+  const name = document.getElementById('inp-sub').value;
+  const sub = (DB[cat]||[]).find(s => s.name === name);
+  if (sub) {
+    document.getElementById('dose-lbl').textContent = `Dosis (${sub.unit})`;
+    const inp = document.getElementById('inp-dose');
+    if (!inp.value) inp.value = sub.dose;
+    inp.placeholder = sub.dose;
+  } else {
+    document.getElementById('dose-lbl').textContent = 'Dosis';
+    document.getElementById('inp-dose').placeholder = 'Menge';
+  }
+}
+
+function addEntry() {
+  const time = document.getElementById('inp-time').value;
+  const cat  = document.getElementById('inp-cat').value;
+  const name = document.getElementById('inp-sub').value;
+  const dose = parseFloat(document.getElementById('inp-dose').value);
+  const note = document.getElementById('inp-note').value.trim();
+  if (!time || !name || !dose || dose <= 0) { alert('Bitte Uhrzeit, Substanz und Dosis angeben.'); return; }
+  const sub = (DB[cat]||[]).find(s => s.name === name);
+  const entries = load();
+  entries.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    date: modalDate, time, category: cat,
+    substance: name, dose,
+    unit: sub?.unit || 'mg',
+    halfLife: sub?.halfLife || 24,
+    note
+  });
+  save(entries);
+  document.getElementById('inp-dose').value = '';
+  document.getElementById('inp-note').value = '';
+  document.getElementById('inp-sub').value = '';
+  renderModalEntries();
+  renderCalendar();
+}
+
+function delEntry(id) {
+  if (!confirm('Eintrag löschen?')) return;
+  save(load().filter(e => e.id !== id));
+  renderModalEntries();
+  renderCalendar();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHART
+═══════════════════════════════════════════════════════════════════ */
+function buildSubSelector() {
+  const container = document.getElementById('sub-selector');
+  container.innerHTML = '';
+  Object.entries(DB).forEach(([cat, subs]) => {
+    const meta = CAT[cat];
+    const sec  = document.createElement('div'); sec.className = 'cat-section';
+    const head = document.createElement('div'); head.className = 'cat-head ' + meta.cls; head.textContent = meta.label;
+    sec.appendChild(head);
+    subs.forEach(sub => {
+      const key = cat + '||' + sub.name;
+      const safeId = 'sc_' + key.replace(/[^\w]/g,'_');
+      const row = document.createElement('div'); row.className = 'sub-row';
+      row.innerHTML = `<input type="checkbox" id="${safeId}" value="${key}" onchange="toggleSub('${key}')">
+                       <label for="${safeId}">${sub.name}</label>`;
+      sec.appendChild(row);
+    });
+    container.appendChild(sec);
+  });
+}
+
+function toggleSub(key) { selSubs.has(key) ? selSubs.delete(key) : selSubs.add(key); renderChart(); }
+
+function setRange(days, btn) {
+  chartDays = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function calcLevel(subEntries, halfLife, atMs) {
+  return subEntries.reduce((total, e) => {
+    const eMs = new Date(`${e.date}T${e.time}`).getTime();
+    const hrs  = (atMs - eMs) / 3600000;
+    if (hrs < 0) return total;
+    return total + e.dose * Math.pow(0.5, hrs / halfLife);
+  }, 0);
+}
+
+function fmtLabel(ts, days) {
+  const d = new Date(ts);
+  if (days <= 7)   return d.toLocaleDateString('de-DE',{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  if (days <= 90)  return d.toLocaleDateString('de-DE',{day:'numeric',month:'short'});
+  return d.toLocaleDateString('de-DE',{month:'short',year:'numeric'});
+}
+
+function renderChart() {
+  const allEntries = load();
+  const canvas = document.getElementById('bloodChart');
+  if (myChart) { myChart.destroy(); myChart = null; }
+
+  if (!selSubs.size) {
+    document.getElementById('chart-heading').textContent = 'Blutspiegel — Substanz links auswählen';
+    myChart = new Chart(canvas, {
+      type:'line', data:{ labels:[], datasets:[] },
+      options:{ plugins:{ legend:{ display:false } }, scales:{ x:{ display:false }, y:{ display:false } } }
+    });
+    return;
+  }
+
+  const nowMs   = Date.now();
+  const rangeMs = chartDays * 86400000;
+  const startMs = nowMs - rangeMs;
+  const pts     = Math.min(300, chartDays * (chartDays <= 7 ? 24 : chartDays <= 30 ? 8 : 2));
+  const stepMs  = rangeMs / pts;
+
+  const labels = [];
+  for (let i = 0; i <= pts; i++) labels.push(fmtLabel(startMs + i*stepMs, chartDays));
+
+  let ci = 0;
+  const datasets = [];
+  selSubs.forEach(key => {
+    const [cat, name] = key.split('||');
+    const sub = (DB[cat]||[]).find(s => s.name === name);
+    if (!sub) return;
+    const subEntries = allEntries.filter(e => e.substance === name && e.category === cat);
+    const color = COLORS[ci++ % COLORS.length];
+    const data = [];
+    for (let i = 0; i <= pts; i++) {
+      const t = startMs + i*stepMs;
+      data.push(Math.round(calcLevel(subEntries, sub.halfLife, t) * 100) / 100);
+    }
+    datasets.push({ label:`${name} (${sub.unit})`, data, borderColor:color, backgroundColor:color+'1a',
+                    borderWidth:2, pointRadius:0, fill:false, tension:.35 });
+  });
+
+  document.getElementById('chart-heading').textContent = `Blutspiegel — ${selSubs.size} Substanz${selSubs.size>1?'en':''}`;
+
+  myChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { position:'top', labels:{ color:'#e6edf3', boxWidth:10, font:{ size:11 } } },
+        tooltip: { backgroundColor:'#161b22', borderColor:'#30363d', borderWidth:1,
+                   titleColor:'#7d8590', bodyColor:'#e6edf3', padding:10 }
+      },
+      scales: {
+        x: {
+          ticks: { color:'#7d8590', maxTicksLimit:chartDays<=7?14:12, font:{ size:10 }, maxRotation:0 },
+          grid:  { color:'#21262d' }
+        },
+        y: {
+          ticks:  { color:'#7d8590', font:{ size:10 } },
+          grid:   { color:'#21262d' },
+          title:  { display:true, text:'Geschätzter Spiegel (Dosis-Einheit)', color:'#7d8590', font:{ size:10 } }
         }
-        
-        function unlockContent() {
-            document.getElementById('password-overlay').classList.add('hidden');
-            document.getElementById('main-content').classList.remove('blurred');
-            
-            // Load shared settings from cloud first, then local overrides
-            loadSharedSettings();
-        }
-        
-        // ===== SHARED CLOUD STORAGE =====
-        // JSONBin.io - Kostenloser Cloud-Speicher
-        const JSONBIN_BIN_ID = '694bcd74ae596e708fae3808';
-        const JSONBIN_API_KEY = '$2a$10$KRUOUP0ZyHUpPwOiNn.rbu3BNdM5YmZvVfM45QZA8/LnoTVB0LBD6';
-        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-        
-        async function loadSharedSettings() {
-            try {
-                const response = await fetch(JSONBIN_URL + '/latest', {
-                    method: 'GET',
-                    headers: {
-                        'X-Master-Key': JSONBIN_API_KEY
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    const sharedSettings = data.record;
-                    
-                    // Lade geteilte Einstellungen für alle Streams
-                    for (let i = 1; i <= 7; i++) {
-                        const streamData = sharedSettings[`stream${i}`];
-                        if (streamData) {
-                            // Setze Raumnamen
-                            if (streamData.roomName) {
-                                document.getElementById('room-name-' + i).value = streamData.roomName;
-                                document.getElementById('label-' + i).textContent = '📱 ' + streamData.roomName;
-                            }
-                            
-                            // Setze URL
-                            if (streamData.url) {
-                                document.getElementById('url-input-' + i).value = streamData.url;
-                                loadStream(i, streamData.url);
-                            }
-                            
-                            // Setze Rotation
-                            if (streamData.rotation !== undefined) {
-                                const container = document.getElementById('frame-container-' + i);
-                                container.className = 'stream-wrapper';
-                                if (streamData.rotation > 0) {
-                                    container.classList.add('rotate-' + streamData.rotation);
-                                }
-                                container.setAttribute('data-rotation', streamData.rotation);
-                                updateRotationText(i, streamData.rotation);
-                            }
-                            
-                            // Setze Größe
-                            if (streamData.size) {
-                                setSize(i, streamData.size);
-                            }
-                        }
-                    }
-                    
-                    console.log('Geteilte Einstellungen geladen ✓');
-                } else {
-                    console.log('Keine geteilten Einstellungen gefunden, lade lokale...');
-                    loadLocalSettings();
-                }
-            } catch (error) {
-                console.error('Fehler beim Laden der geteilten Einstellungen:', error);
-                loadLocalSettings();
-            }
-        }
-        
-        function loadLocalSettings() {
-            // Fallback: Lade lokale Einstellungen
-            for (let i = 1; i <= 7; i++) {
-                loadSavedStream(i);
-                loadSavedRotation(i);
-                loadSavedRoomName(i);
-                loadSavedSize(i);
-            }
-        }
-        
-        async function saveToCloud() {
-            // Sammle alle aktuellen Einstellungen
-            const settings = {};
-            
-            for (let i = 1; i <= 7; i++) {
-                const roomName = document.getElementById('room-name-' + i).value;
-                const url = document.getElementById('url-input-' + i).value;
-                const rotation = parseInt(document.getElementById('frame-container-' + i).getAttribute('data-rotation')) || 0;
-                const sizeClass = document.getElementById('stream-box-' + i).className;
-                const size = sizeClass.match(/size-(\w+)/)?.[1] || 'medium';
-                
-                settings[`stream${i}`] = {
-                    roomName: roomName,
-                    url: url,
-                    rotation: rotation,
-                    size: size
-                };
-            }
-            
-            try {
-                const response = await fetch(JSONBIN_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Master-Key': JSONBIN_API_KEY
-                    },
-                    body: JSON.stringify(settings)
-                });
-                
-                if (response.ok) {
-                    console.log('Einstellungen in Cloud gespeichert ✓');
-                    showSaveNotification('✓ Gespeichert und synchronisiert!');
-                } else {
-                    console.error('Fehler beim Speichern in Cloud');
-                    showSaveNotification('⚠ Nur lokal gespeichert');
-                }
-            } catch (error) {
-                console.error('Cloud-Speicher-Fehler:', error);
-                showSaveNotification('⚠ Nur lokal gespeichert');
-            }
-        }
-        
-        function showSaveNotification(message) {
-            // Zeige kurze Benachrichtigung
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background-color: #4a9eff;
-                color: white;
-                padding: 15px 25px;
-                border-radius: 5px;
-                z-index: 10000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                animation: slideIn 0.3s ease;
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }, 2000);
-        }
-        
-        function saveRoomName(streamNumber) {
-            const input = document.getElementById('room-name-' + streamNumber);
-            const label = document.getElementById('label-' + streamNumber);
-            const roomName = input.value.trim() || 'Stream ' + streamNumber;
-            
-            // Update label
-            label.textContent = '📱 ' + roomName;
-            
-            // Save to localStorage
-            localStorage.setItem('vdo-room-name-' + streamNumber, roomName);
-            
-            // Save to cloud
-            saveToCloud();
-        }
-        
-        function loadSavedRoomName(streamNumber) {
-            const savedName = localStorage.getItem('vdo-room-name-' + streamNumber);
-            
-            if (savedName) {
-                const input = document.getElementById('room-name-' + streamNumber);
-                const label = document.getElementById('label-' + streamNumber);
-                
-                input.value = savedName;
-                label.textContent = '📱 ' + savedName;
-            }
-        }
-        
-        function saveStream(streamNumber) {
-            const input = document.getElementById('url-input-' + streamNumber);
-            let url = input.value.trim();
-            
-            if (!url) {
-                alert('Bitte gib einen VDO.Ninja Link ein!');
-                return;
-            }
-            
-            // URL in LocalStorage speichern
-            localStorage.setItem('vdo-stream-' + streamNumber, url);
-            
-            // Stream laden
-            loadStream(streamNumber, url);
-            
-            // In Cloud speichern
-            saveToCloud();
-        }
-        
-        function loadStream(streamNumber, url) {
-            const container = document.getElementById('frame-container-' + streamNumber);
-            
-            // Entferne Placeholder
-            const placeholder = container.querySelector('.placeholder-text');
-            if (placeholder) {
-                placeholder.remove();
-            }
-            
-            // Entferne altes iframe falls vorhanden
-            const oldIframe = container.querySelector('iframe');
-            if (oldIframe) {
-                oldIframe.remove();
-            }
-            
-            // Erstelle neues iframe
-            const iframe = document.createElement('iframe');
-            iframe.src = url;
-            iframe.allow = "autoplay; camera; microphone; display-capture; picture-in-picture";
-            iframe.allowFullscreen = true;
-            
-            container.appendChild(iframe);
-        }
-        
-        function loadSavedStream(streamNumber) {
-            const savedUrl = localStorage.getItem('vdo-stream-' + streamNumber);
-            
-            if (savedUrl) {
-                // URL in Eingabefeld setzen
-                document.getElementById('url-input-' + streamNumber).value = savedUrl;
-                // Stream laden
-                loadStream(streamNumber, savedUrl);
-            }
-        }
-        
-        function clearStream(streamNumber) {
-            if (confirm('Stream wirklich löschen?')) {
-                // Aus LocalStorage entfernen
-                localStorage.removeItem('vdo-stream-' + streamNumber);
-                localStorage.removeItem('vdo-rotation-' + streamNumber);
-                
-                // Eingabefeld leeren
-                document.getElementById('url-input-' + streamNumber).value = '';
-                
-                // Rotation zurücksetzen
-                const container = document.getElementById('frame-container-' + streamNumber);
-                container.className = 'stream-wrapper';
-                container.setAttribute('data-rotation', '0');
-                updateRotationText(streamNumber, 0);
-                
-                // iframe entfernen und Placeholder anzeigen
-                const iframe = container.querySelector('iframe');
-                if (iframe) {
-                    iframe.remove();
-                }
-                
-                if (!container.querySelector('.placeholder-text')) {
-                    const placeholder = document.createElement('div');
-                    placeholder.className = 'placeholder-text';
-                    placeholder.textContent = 'Kein Stream geladen';
-                    container.appendChild(placeholder);
-                }
-            }
-        }
-        
-        function rotateFrame(streamNumber) {
-            const container = document.getElementById('frame-container-' + streamNumber);
-            let currentRotation = parseInt(container.getAttribute('data-rotation')) || 0;
-            
-            // Nächste Rotation: 0 -> 90 -> 180 -> 270 -> 0
-            currentRotation = (currentRotation + 90) % 360;
-            
-            // Rotation anwenden
-            container.className = 'stream-wrapper';
-            if (currentRotation > 0) {
-                container.classList.add('rotate-' + currentRotation);
-            }
-            
-            container.setAttribute('data-rotation', currentRotation);
-            
-            // Button-Text aktualisieren
-            updateRotationText(streamNumber, currentRotation);
-            
-            // Rotation speichern
-            localStorage.setItem('vdo-rotation-' + streamNumber, currentRotation);
-            
-            // In Cloud speichern
-            saveToCloud();
-        }
-        
-        function updateRotationText(streamNumber, rotation) {
-            const textElement = document.getElementById('rotation-text-' + streamNumber);
-            textElement.textContent = '🔄 ' + rotation + '°';
-        }
-        
-        function loadSavedRotation(streamNumber) {
-            const savedRotation = localStorage.getItem('vdo-rotation-' + streamNumber);
-            
-            if (savedRotation !== null) {
-                const rotation = parseInt(savedRotation);
-                const container = document.getElementById('frame-container-' + streamNumber);
-                
-                container.className = 'stream-wrapper';
-                if (rotation > 0) {
-                    container.classList.add('rotate-' + rotation);
-                }
-                
-                container.setAttribute('data-rotation', rotation);
-                updateRotationText(streamNumber, rotation);
-            }
-        }
-        
-        function setSize(streamNumber, size) {
-            const streamBox = document.getElementById('stream-box-' + streamNumber);
-            
-            // Entferne alle size-Klassen
-            streamBox.className = 'stream-box size-' + size;
-            
-            // Aktualisiere Button-Status
-            const buttons = streamBox.querySelectorAll('.size-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            // Finde und aktiviere den richtigen Button
-            const sizeNames = ['small', 'medium', 'large', 'xlarge', 'xxlarge'];
-            const btnIndex = sizeNames.indexOf(size);
-            if (btnIndex >= 0 && buttons[btnIndex]) {
-                buttons[btnIndex].classList.add('active');
-            }
-            
-            // Größe speichern
-            localStorage.setItem('vdo-size-' + streamNumber, size);
-            
-            // In Cloud speichern
-            saveToCloud();
-        }
-        
-        function loadSavedSize(streamNumber) {
-            const savedSize = localStorage.getItem('vdo-size-' + streamNumber);
-            
-            if (savedSize) {
-                setSize(streamNumber, savedSize);
-            }
-        }
-    </script>
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SUBSTANCES VIEW
+═══════════════════════════════════════════════════════════════════ */
+function switchCat(cat, btn) {
+  curCat = cat;
+  document.querySelectorAll('.cat-tab').forEach(t => { t.className = 'cat-tab'; });
+  btn.classList.add(CAT[cat].tab);
+  renderSubstances(cat);
+}
+
+function fmtHalfLife(h) {
+  if (h < 1)   return `${Math.round(h*60)} min`;
+  if (h < 24)  return `${h} Std`;
+  if (h < 168) return `${+(h/24).toFixed(1)} Tage`;
+  return `${+(h/168).toFixed(1)} Wochen`;
+}
+
+function renderSubstances(cat) {
+  const meta = CAT[cat];
+  document.getElementById('sub-grid').innerHTML = (DB[cat]||[]).map(s => `
+    <div class="sub-card">
+      <div class="sub-card-name" style="color:${meta.color}">${s.name}</div>
+      <div class="sub-card-meta">
+        <span>Halbwertszeit: <strong>${fmtHalfLife(s.halfLife)}</strong></span>
+        <span>Typische Dosis: <strong>${s.dose} ${s.unit}</strong></span>
+        <span>Einheit: <strong>${s.unit}</strong></span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════ */
+renderCalendar();
+buildSubSelector();
+renderSubstances('supplements');
+</script>
 </body>
 </html>
